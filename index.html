@@ -355,15 +355,25 @@
   };
   let action = 'yes';
   document.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => action = b.dataset.a));
+  let sending = false;
+  const rid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   document.getElementById('form').addEventListener('submit', async e => {
     e.preventDefault();
+    if (sending) return;
     const names = [...guests.querySelectorAll('input')].map(i => i.value.trim()).filter(Boolean);
     if (!names.length){ err.textContent = 'Пожалуйста, укажите своё имя'; guests.querySelector('input').focus(); return; }
     err.textContent = '';
-    const payload = { names, attending: action === 'yes', at: new Date().toISOString() };
+    const payload = { id: rid(), names, attending: action === 'yes', at: new Date().toISOString() };
     if (ENDPOINT){
+      sending = true;
+      const btns = document.querySelectorAll('#form button');
+      btns.forEach(b => b.disabled = true);
+      err.textContent = 'Отправляем…';
       try { await fetch(ENDPOINT, {method:'POST', mode:'no-cors', body: JSON.stringify(payload)}); }
-      catch(_) { err.textContent = 'Не получилось отправить, попробуйте ещё раз'; return; }
+      catch(_) {
+        err.textContent = 'Не получилось отправить, попробуйте ещё раз';
+        sending = false; btns.forEach(b => b.disabled = false); return;
+      }
     }
     const list = names.map(n => n.replace(/[<>&"]/g, '')).join(', ');
     document.getElementById('rsvpBox').innerHTML = (action === 'yes'
